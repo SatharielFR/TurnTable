@@ -29,6 +29,7 @@ bl_info = {
 
 
 import bpy
+from mathutils import Vector
 from math import pi
 from bpy.props import (
     BoolProperty,
@@ -52,6 +53,31 @@ class CAMERATURN_OT_RunAction(Operator):
     bl_label = "Create Animation"
     bl_description = "Create camera rotation around selected object"
     bl_options = {'REGISTER', 'UNDO'}
+
+    def get_min(self, object_bb):
+        min_x = min([object_bb[i][0] for i in range(0, 8)])
+        min_y = min([object_bb[i][1] for i in range(0, 8)])
+        min_z = min([object_bb[i][2] for i in range(0, 8)])
+        return Vector((min_x, min_y, min_z))
+
+    def get_max(self, object_bb):
+        max_x = max([object_bb[i][0] for i in range(0, 8)])
+        max_y = max([object_bb[i][1] for i in range(0, 8)])
+        max_z = max([object_bb[i][2] for i in range(0, 8)])
+        return Vector((max_x, max_y, max_z))
+
+    # ---------------------------------
+    # Get object center by bound_box
+    # ---------------------------------
+    def getCenter(self, object):
+        # Previous version (don't works)
+        #boundBoxObj = [object.matrix_world@Vector(v) for v in object.bound_box]
+        #center = (sum((Vector(v) for v in object.bound_box), Vector()) / 8)
+        #return sum((v for v in object.bound_box), Vector()) / 8
+
+        center = self.get_min(object.bound_box) - self.get_max(object.bound_box)
+        (dist_x, dist_y, dist_z) = tuple([abs(c) for c in center])
+        return Vector((dist_x, dist_y, dist_z))
 
     def execute(self, context):
         # ----------------------
@@ -96,6 +122,9 @@ class CAMERATURN_OT_RunAction(Operator):
         savedinterpolation = context.preferences.edit.keyframe_new_interpolation_type
         # change interpolation mode
         context.preferences.edit.keyframe_new_interpolation_type = 'LINEAR'
+
+        print(self.getCenter(selectobject))
+
         # create first frame
         myempty.rotation_euler = (0, 0, 0)
         myempty.empty_display_size = 0.1
