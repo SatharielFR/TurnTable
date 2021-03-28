@@ -30,7 +30,7 @@ bl_info = {
 
 import bpy
 from mathutils import Vector
-from math import pi
+from math import pi, sqrt
 from bpy.props import (
     BoolProperty,
     EnumProperty,
@@ -67,17 +67,32 @@ class CAMERATURN_OT_RunAction(Operator):
         return Vector((max_x, max_y, max_z))
 
     # ---------------------------------
-    # Get object center by bound_box
+    # Get length between two point about the object by bound_box
     # ---------------------------------
-    def getCenter(self, object):
+    def get_object_length(self, object):
         # Previous version (don't works)
         #boundBoxObj = [object.matrix_world@Vector(v) for v in object.bound_box]
         #center = (sum((Vector(v) for v in object.bound_box), Vector()) / 8)
         #return sum((v for v in object.bound_box), Vector()) / 8
 
-        center = self.get_min(object.bound_box) - self.get_max(object.bound_box)
-        (dist_x, dist_y, dist_z) = tuple([abs(c) for c in center])
-        return Vector((dist_x, dist_y, dist_z))
+        #center = self.get_min(object.bound_box) - self.get_max(object.bound_box)
+        #(dist_x, dist_y, dist_z) = tuple([abs(c) for c in center])
+
+        # objMin = self.get_min(object.bound_box)
+        # objMax = self.get_max(object.bound_box)
+        # xDim = objMax[0] + objMin[0]
+        # yDim = objMax[1] + objMin[1]
+        # zDim = objMax[2] + objMin[2]
+
+        # dist = sqrt(xDim**2 + yDim**2 + zDim**2)
+
+        bb = object.bound_box
+        dx_local = max(bb[i][0] for i in range(8)) - min(bb[i][0] for i in range(8))
+        dy_local = max(bb[i][1] for i in range(8)) - min(bb[i][1] for i in range(8))
+        dz_local = max(bb[i][2] for i in range(8)) - min(bb[i][2] for i in range(8))
+        longest_side = max(dx_local*object.scale[0], dy_local*object.scale[1], dz_local*object.scale[2])
+
+        return longest_side
 
     def execute(self, context):
         # ----------------------
@@ -123,7 +138,7 @@ class CAMERATURN_OT_RunAction(Operator):
         # change interpolation mode
         context.preferences.edit.keyframe_new_interpolation_type = 'LINEAR'
 
-        print(self.getCenter(selectobject))
+        print(self.get_dimension(selectobject))
 
         # create first frame
         myempty.rotation_euler = (0, 0, 0)
