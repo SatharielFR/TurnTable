@@ -274,8 +274,6 @@ def update_light(self, context):
     bpy.context.view_layer.objects.active = selectobject
     scene.frame_set(savedframe)
 
-    return {'FINISHED'}
-
 
 # ------------------------------------------------------
 # Define Properties
@@ -352,11 +350,6 @@ class CAMERATURN_Props(PropertyGroup):
         name="Clear Camera",
         description="Clear previous camera animations if there are any\n"
         "(For instance, previous Dolly Zoom)",
-        default=False
-    )
-    light_Creation: BoolProperty(
-        name="Create Light",
-        description="Add a light to the tracked object",
         default=False
     )
     light_Power: FloatProperty(
@@ -452,8 +445,7 @@ class CAMERATURN_PT_ui(Panel):
                 box.scale_y = 0.5
                 box.label(text=buf, icon='MESH_DATA')
                 row = col.row(align=False)
-                row.prop(scene, "light")
-
+                
                 #display active palette
                 row.prop(turn_camera, "light_Color", text='Light Color')
                 #display Power instensity
