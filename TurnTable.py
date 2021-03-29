@@ -54,10 +54,30 @@ class CAMERATURN_OT_RunAction(Operator):
     bl_description = "Create camera rotation around selected object"
     bl_options = {'REGISTER', 'UNDO'}
 
+    # -----------------------------------
+    # Set camera location and constraint
+    # -----------------------------------
     def set_camera(self, camera, currentObject, ratio):
         objectDim = get_object_length(self, currentObject)
+        
+        # set camera location 
         camera.location[1] = objectDim * ratio
         camera.location[2] = objectDim * ratio / 2
+        
+        # add track_to constraint to camera
+        constraintName = "Turntable_Track"
+        
+        if len(camera.constraints) != 0:
+            if camera.constraints.get(constraintName) is not None:
+                cameraTrack = camera.constraints.get(constraintName)
+            else:
+                cameraTrack = camera.constraints.new(type="TRACK_TO")
+        else:
+            cameraTrack = camera.constraints.new(type="TRACK_TO")
+        cameraTrack.name = constraintName
+        cameraTrack.target = currentObject
+        cameraTrack.track_axis = "TRACK_NEGATIVE_Z"
+        cameraTrack.up_axis = "UP_Y"
 
     def execute(self, context):
         # ----------------------
@@ -212,7 +232,6 @@ def update_light(self, context):
     # ----------------------
     # Save old data
     # ----------------------
-
     scene = context.scene
     turn_camera = scene.turn_camera
     selectobject = context.active_object
@@ -269,9 +288,9 @@ def get_max(self, object_bb):
     max_z = max([object_bb[i][2] for i in range(0, 8)])
     return Vector((max_x, max_y, max_z))
 
-# ---------------------------------
+# ------------------------------------------------------------
 # Get length between two point about the object by bound_box
-# ---------------------------------
+# ------------------------------------------------------------
 def get_object_length(self, currentObject):
     # Previous version (don't works)
     #boundBoxObj = [object.matrix_world@Vector(v) for v in object.bound_box]
