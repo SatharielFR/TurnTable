@@ -54,45 +54,10 @@ class CAMERATURN_OT_RunAction(Operator):
     bl_description = "Create camera rotation around selected object"
     bl_options = {'REGISTER', 'UNDO'}
 
-    def get_min(self, object_bb):
-        min_x = min([object_bb[i][0] for i in range(0, 8)])
-        min_y = min([object_bb[i][1] for i in range(0, 8)])
-        min_z = min([object_bb[i][2] for i in range(0, 8)])
-        return Vector((min_x, min_y, min_z))
-
-    def get_max(self, object_bb):
-        max_x = max([object_bb[i][0] for i in range(0, 8)])
-        max_y = max([object_bb[i][1] for i in range(0, 8)])
-        max_z = max([object_bb[i][2] for i in range(0, 8)])
-        return Vector((max_x, max_y, max_z))
-
-    # ---------------------------------
-    # Get length between two point about the object by bound_box
-    # ---------------------------------
-    def get_object_length(self, object):
-        # Previous version (don't works)
-        #boundBoxObj = [object.matrix_world@Vector(v) for v in object.bound_box]
-        #center = (sum((Vector(v) for v in object.bound_box), Vector()) / 8)
-        #return sum((v for v in object.bound_box), Vector()) / 8
-
-        #center = self.get_min(object.bound_box) - self.get_max(object.bound_box)
-        #(dist_x, dist_y, dist_z) = tuple([abs(c) for c in center])
-
-        # objMin = self.get_min(object.bound_box)
-        # objMax = self.get_max(object.bound_box)
-        # xDim = objMax[0] + objMin[0]
-        # yDim = objMax[1] + objMin[1]
-        # zDim = objMax[2] + objMin[2]
-
-        # dist = sqrt(xDim**2 + yDim**2 + zDim**2)
-
-        bb = object.bound_box
-        dx_local = max(bb[i][0] for i in range(8)) - min(bb[i][0] for i in range(8))
-        dy_local = max(bb[i][1] for i in range(8)) - min(bb[i][1] for i in range(8))
-        dz_local = max(bb[i][2] for i in range(8)) - min(bb[i][2] for i in range(8))
-        longest_side = max(dx_local*object.scale[0], dy_local*object.scale[1], dz_local*object.scale[2])
-
-        return longest_side
+    def set_camera(self, camera, currentObject, ratio):
+        objectDim = get_object_length(self, currentObject)
+        camera.location[1] = objectDim * ratio
+        camera.location[2] = objectDim * ratio / 2
 
     def execute(self, context):
         # ----------------------
@@ -102,6 +67,7 @@ class CAMERATURN_OT_RunAction(Operator):
         turn_camera = scene.turn_camera
         selectobject = context.active_object
         camera = scene.camera
+        cameraObj = bpy.data.objects[camera.name]
         savedcursor = scene.cursor.location.copy()  # cursor position
         savedframe = scene.frame_current
         if turn_camera.use_cursor is False:
@@ -138,7 +104,7 @@ class CAMERATURN_OT_RunAction(Operator):
         # change interpolation mode
         context.preferences.edit.keyframe_new_interpolation_type = 'LINEAR'
 
-        print(self.get_dimension(selectobject))
+        self.set_camera(cameraObj, selectobject, 5)
 
         # create first frame
         myempty.rotation_euler = (0, 0, 0)
@@ -253,6 +219,8 @@ def update_light(self, context):
     camera = scene.camera
     savedcursor = scene.cursor.location.copy()  # cursor position
     savedframe = scene.frame_current
+    fLightDist = 4
+    
     if turn_camera.use_cursor is False:
         bpy.ops.view3d.snap_cursor_to_selected()
 
@@ -274,7 +242,7 @@ def update_light(self, context):
         currentLight.name = "Turn Table - Light"
         currentLight.matrix_world = savedstate
         #change position
-        currentLight.location.z += 10.0
+        currentLight.location.z += get_object_length(self, selectobject) * fLightDist
     
     #update light params
     currentLight.data.color =  bpy.context.scene.turn_camera.light_Color       #color
@@ -289,6 +257,45 @@ def update_light(self, context):
     bpy.context.view_layer.objects.active = selectobject
     scene.frame_set(savedframe)
 
+def get_min(self, object_bb):
+    min_x = min([object_bb[i][0] for i in range(0, 8)])
+    min_y = min([object_bb[i][1] for i in range(0, 8)])
+    min_z = min([object_bb[i][2] for i in range(0, 8)])
+    return Vector((min_x, min_y, min_z))
+
+def get_max(self, object_bb):
+    max_x = max([object_bb[i][0] for i in range(0, 8)])
+    max_y = max([object_bb[i][1] for i in range(0, 8)])
+    max_z = max([object_bb[i][2] for i in range(0, 8)])
+    return Vector((max_x, max_y, max_z))
+
+# ---------------------------------
+# Get length between two point about the object by bound_box
+# ---------------------------------
+def get_object_length(self, currentObject):
+    # Previous version (don't works)
+    #boundBoxObj = [object.matrix_world@Vector(v) for v in object.bound_box]
+    #center = (sum((Vector(v) for v in object.bound_box), Vector()) / 8)
+    #return sum((v for v in object.bound_box), Vector()) / 8
+
+    #center = self.get_min(object.bound_box) - self.get_max(object.bound_box)
+    #(dist_x, dist_y, dist_z) = tuple([abs(c) for c in center])
+
+    # objMin = self.get_min(object.bound_box)
+    # objMax = self.get_max(object.bound_box)
+    # xDim = objMax[0] + objMin[0]
+    # yDim = objMax[1] + objMin[1]
+    # zDim = objMax[2] + objMin[2]
+
+    # dist = sqrt(xDim**2 + yDim**2 + zDim**2)
+
+    bb = currentObject.bound_box
+    dx_local = max(bb[i][0] for i in range(8)) - min(bb[i][0] for i in range(8))
+    dy_local = max(bb[i][1] for i in range(8)) - min(bb[i][1] for i in range(8))
+    dz_local = max(bb[i][2] for i in range(8)) - min(bb[i][2] for i in range(8))
+    longest_side = max(dx_local*currentObject.scale[0], dy_local*currentObject.scale[1], dz_local*currentObject.scale[2])
+
+    return longest_side
 
 # ------------------------------------------------------
 # Define Properties
